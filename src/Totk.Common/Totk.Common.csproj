@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Revrs" Version="1.0.3" />
+    <PackageReference Include="SarcLibrary" Version="3.0.4" />
+    <PackageReference Include="Standart.Hash.xxHash" Version="4.0.5" />
+    <PackageReference Include="ZstdSharp.Port" Version="0.7.5" />
+  </ItemGroup>
+
+</Project>
