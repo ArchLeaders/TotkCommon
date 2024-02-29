@@ -14,8 +14,21 @@ public static class ZstdExtension
 
     private static readonly Decompressor _defaultDecompressor = new();
     private static readonly Dictionary<int, Decompressor> _decompressors = [];
-    private static readonly Compressor _defaultCompressor = new();
+    private static readonly Compressor _defaultCompressor = new(CompressionLevel);
     private static readonly Dictionary<int, Compressor> _compressors = [];
+
+    private static int _compressionLevel = 17;
+    public static int CompressionLevel {
+        get => _compressionLevel;
+        set {
+            _compressionLevel = value;
+            _defaultCompressor.Level = _compressionLevel;
+
+            foreach (var (_, compressor) in _compressors) {
+                compressor.Level = value;
+            }
+        }
+    }
 
     public static void LoadDictionaries(string file)
     {
@@ -181,7 +194,7 @@ public static class ZstdExtension
         decompressor.LoadDictionary(buffer);
         _decompressors[buffer[4..8].Read<int>()] = decompressor;
 
-        Compressor compressor = new();
+        Compressor compressor = new(CompressionLevel);
         compressor.LoadDictionary(buffer);
         _compressors[buffer[4..8].Read<int>()] = compressor;
 
