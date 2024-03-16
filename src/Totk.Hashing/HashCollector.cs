@@ -1,8 +1,9 @@
-﻿using Revrs;
+﻿using CommunityToolkit.HighPerformance.Buffers;
+using Revrs;
 using Revrs.Extensions;
 using SarcLibrary;
-using Standart.Hash.xxHash;
 using System.Buffers;
+using System.IO.Hashing;
 using System.Text.Json;
 using Totk.Common.Components;
 using Totk.Common.Extensions;
@@ -64,7 +65,6 @@ public class HashCollector(string[] sourceFolders)
     public async Task Collect()
     {
         foreach (string folder in _sourceFolders) {
-
             string zsDicPack = Path.Combine(folder, "Pack", "ZsDic.pack.zs");
             if (!File.Exists(zsDicPack)) {
                 return;
@@ -105,23 +105,18 @@ public class HashCollector(string[] sourceFolders)
 
         using FileStream fs = File.OpenRead(filePath);
         int size = Convert.ToInt32(fs.Length);
-        byte[] buffer = ArrayPool<byte>.Shared.Rent(size);
-        Span<byte> data = buffer.AsSpan()[..size];
-        fs.Read(data);
+        using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(size);
+        fs.Read(buffer.Span);
 
         if (attributes.HasFlag(RomfsFileAttributes.HasZsExtension)) {
-            int decompressedSize = data.GetZsDecompressedSize();
-            byte[] decompressedBuffer = ArrayPool<byte>.Shared.Rent(decompressedSize);
-            Span<byte> decompressed = decompressedBuffer.AsSpan()[..decompressedSize];
-            data.ZsDecompress(decompressed);
-            CollectData(canonical, decompressed, version);
-            ArrayPool<byte>.Shared.Return(decompressedBuffer);
-        }
-        else {
-            CollectData(canonical, data, version);
+            int decompressedSize = buffer.Span.GetZsDecompressedSize();
+            using SpanOwner<byte> decompressed = SpanOwner<byte>.Allocate(decompressedSize);
+            buffer.Span.ZsDecompress(decompressed.Span);
+            CollectData(canonical, decompressed.Span, version);
+            return;
         }
 
-        ArrayPool<byte>.Shared.Return(buffer);
+        CollectData(canonical, buffer.Span, version);
     }
 
     private void CollectData(string canonical, Span<byte> data, int version)
@@ -143,20 +138,17 @@ public class HashCollector(string[] sourceFolders)
 
         if (data.IsZsCompressed()) {
             int decompressedSize = data.GetZsDecompressedSize();
-            byte[] decompressedBuffer = ArrayPool<byte>.Shared.Rent(decompressedSize);
-            Span<byte> decompressed = decompressedBuffer.AsSpan()[..decompressedSize];
-            data.ZsDecompress(decompressed);
+            using SpanOwner<byte> decompressed = SpanOwner<byte>.Allocate(decompressedSize);
+            data.ZsDecompress(decompressed.Span);
 
             entry = new() {
-                Hash = xxHash64.ComputeHash(decompressed, decompressedSize),
+                Hash = XxHash3.HashToUInt64(decompressed.Span),
                 Size = decompressedSize
             };
-
-            ArrayPool<byte>.Shared.Return(decompressedBuffer);
         }
         else {
             entry = new() {
-                Hash = xxHash64.ComputeHash(data, data.Length),
+                Hash = XxHash3.HashToUInt64(data),
                 Size = data.Length
             };
         }

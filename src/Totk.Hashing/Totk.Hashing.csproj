@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Tkmm.Hashing\Totk.Common.csproj" />
+    <ProjectReference Include="..\Totk.Common\Totk.Common.csproj" />
   </ItemGroup>
 
 </Project>
