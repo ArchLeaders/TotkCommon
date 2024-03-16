@@ -2,7 +2,7 @@
 
 internal struct ChecksumEntry
 {
-    public ChecksumEntryInfo Info;
+    public int Version;
     public int Size;
-    public ulong Checksum;
+    public ulong Hash;
 }

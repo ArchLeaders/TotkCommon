@@ -3,7 +3,6 @@ using Revrs.Extensions;
 using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Hashing;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Totk.Common.Extensions;
 using Totk.Common.Models;
@@ -12,9 +11,8 @@ namespace Totk.Common.Components;
 
 public class TotkChecksums
 {
-    private readonly int _baseVersion;
-    private readonly FrozenDictionary<ulong, ChecksumEntry> _baseEntries;
-    private readonly ChecksumEntry[] _entries = [];
+    private readonly int _version;
+    private readonly FrozenDictionary<ulong, ChecksumEntry[]> _entries;
 
     public static TotkChecksums FromFile(string checksumCachePath)
     {
@@ -22,25 +20,24 @@ public class TotkChecksums
         return FromStream(fs);
     }
 
-    public static TotkChecksums FromStream(Stream checksumCacheStream)
+    public static TotkChecksums FromStream(Stream stream)
     {
-        int baseVersion = checksumCacheStream.Read<int>();
-        int baseEntryCount = checksumCacheStream.Read<int>();
+        int version = stream.Read<int>();
+        int entryCount = stream.Read<int>();
 
-        Dictionary<ulong, ChecksumEntry> baseEntries = [];
-        for (int i = 0; i < baseEntryCount; i++) {
-            ulong key = checksumCacheStream.Read<ulong>();
-            baseEntries[key] = checksumCacheStream.Read<ChecksumEntry>();
-        }
-
-        long entryCount = (checksumCacheStream.Length - checksumCacheStream.Position) / Unsafe.SizeOf<ChecksumEntry>();
-        ChecksumEntry[] entries = new ChecksumEntry[entryCount];
-
+        Dictionary<ulong, ChecksumEntry[]> entries = [];
         for (int i = 0; i < entryCount; i++) {
-            entries[i] = checksumCacheStream.Read<ChecksumEntry>();
+            ulong key = stream.Read<ulong>();
+            int count = stream.Read<int>();
+            ChecksumEntry[] versions = new ChecksumEntry[count];
+            for (int j = 0; j < count; j++) {
+                versions[j] = stream.Read<ChecksumEntry>();
+            }
+
+            entries[key] = versions;
         }
 
-        return new(baseVersion, baseEntries, entries);
+        return new(version, entries);
     }
 
     public static ulong GetNameHash(ReadOnlySpan<char> canonicalFileName)
@@ -49,11 +46,10 @@ public class TotkChecksums
         return XxHash3.HashToUInt64(canonicalFileNameBytes);
     }
 
-    private TotkChecksums(int baseVersion, Dictionary<ulong, ChecksumEntry> baseEntries, ChecksumEntry[] entries)
+    private TotkChecksums(int version, Dictionary<ulong, ChecksumEntry[]> entries)
     {
-        _baseVersion = baseVersion;
-        _baseEntries = baseEntries.ToFrozenDictionary();
-        _entries = entries;
+        _version = version;
+        _entries = entries.ToFrozenDictionary();
     }
 
     public bool IsFileVanilla(string filePath, string baseRomfsFolder)
@@ -125,30 +121,33 @@ public class TotkChecksums
         if (decompressedSize > 0) {
             using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(decompressedSize);
             data.ZsDecompress(buffer.Span);
-            bool isMatch = XxHash3.HashToUInt64(buffer.Span) == entry.Checksum;
+            bool isMatch = XxHash3.HashToUInt64(buffer.Span) == entry.Hash;
             return isMatch;
         }
 
-        return XxHash3.HashToUInt64(data) == entry.Checksum;
+        return XxHash3.HashToUInt64(data) == entry.Hash;
     }
 
     private bool Lookup(ReadOnlySpan<char> canonicalFileName, int version, [MaybeNullWhen(false)] out ChecksumEntry entry)
     {
         ulong key = GetNameHash(canonicalFileName);
 
-        if (_baseEntries.TryGetValue(key, out entry) == false) {
+        if (_entries.TryGetValue(key, out ChecksumEntry[]? entries) == false) {
+            entry = default;
             return false;
         }
 
-        if (version == _baseVersion) {
+        entry = entries[0];
+        if (version == _version) {
             return true;
         }
 
-        int index = entry.Info.FirstVersionIndex;
-        ChecksumEntry first = _entries[index];
-        ChecksumEntry next;
+        for (int i = 1; i < entries.Length; i++) {
+            ref ChecksumEntry next = ref entries[i];
+            if (next.Version > version) {
+                break;
+            }
 
-        while ((next = _entries[index++]).Info.Version <= version && next.Info.Version >= first.Info.Version) {
             entry = next;
         }
 

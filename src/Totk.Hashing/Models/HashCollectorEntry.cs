@@ -1,18 +1,22 @@
-﻿namespace Totk.Hashing.Models;
+﻿using System.Text.Json.Serialization;
 
-public class HashCollectorEntry
+namespace Totk.Hashing.Models;
+
+public struct HashCollectorEntry
 {
-    public int Size { get; set; }
-    public ulong Hash { get; set; }
-    public Dictionary<int, HashCollectorEntry> Versions { get; set; } = [];
+    [JsonInclude]
+    public int Version;
 
-    public override bool Equals(object? obj)
-    {
-        return obj is HashCollectorEntry entry ? entry.Size == Size && entry.Hash == Hash : base.Equals(obj);
-    }
+    [JsonInclude]
+    public int Size;
 
-    public override int GetHashCode()
+    [JsonInclude]
+    public ulong Hash;
+
+    public readonly void Deconstruct(out int version, out int size, out ulong hash)
     {
-        return Size.GetHashCode() + Hash.GetHashCode();
+        version = Version;
+        size = Size;
+        hash = Hash;
     }
 }

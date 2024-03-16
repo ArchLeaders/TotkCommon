@@ -8,6 +8,7 @@ using System.Text.Json;
 using Totk.Common.Components;
 using Totk.Common.Extensions;
 using Totk.Hashing.Models;
+using HashVersions = System.Collections.Generic.List<Totk.Hashing.Models.HashCollectorEntry>;
 
 namespace Totk.Hashing;
 
@@ -27,7 +28,7 @@ public class HashCollector(string[] sourceFolders)
     private int _baseVersion = -1;
     private int _tracking = 0;
     private readonly string[] _sourceFolders = sourceFolders;
-    private readonly Dictionary<string, HashCollectorEntry> _cache = [];
+    private readonly Dictionary<string, HashVersions> _cache = [];
 
     public void Save(Stream stream)
     {
@@ -38,21 +39,14 @@ public class HashCollector(string[] sourceFolders)
             _cache.Remove(str);
         }
 
-        int totalVersionCount = 0;
-        foreach ((string key, HashCollectorEntry entry) in _cache) {
+        foreach ((string key, HashVersions versions) in _cache) {
             stream.Write(TotkChecksums.GetNameHash(key));
-            stream.Write(totalVersionCount);
-            stream.Write(entry.Size);
-            stream.Write(entry.Hash);
+            stream.Write(versions.Count);
 
-            totalVersionCount += entry.Versions.Count;
-        }
-
-        foreach ((string _, HashCollectorEntry entry) in _cache) {
-            foreach ((int version, HashCollectorEntry subEntry) in entry.Versions) {
+            foreach (var (version, size, hash) in versions) {
                 stream.Write(version);
-                stream.Write(subEntry.Size);
-                stream.Write(subEntry.Hash);
+                stream.Write(size);
+                stream.Write(hash);
             }
         }
     }
@@ -122,10 +116,20 @@ public class HashCollector(string[] sourceFolders)
     private void CollectData(string canonical, Span<byte> data, int version)
     {
         if (data.Length > 3 && data.Read<uint>() == SARC_MAGIC) {
+            ReadOnlySpan<char> ext = Path.GetExtension(canonical.AsSpan());
             RevrsReader reader = new(data);
             ImmutableSarc sarc = new(ref reader);
             foreach ((string sarcFileName, Span<byte> sarcFileData) in sarc) {
-                CollectData(sarcFileName, sarcFileData, version);
+                switch (ext) {
+                    case ".pack": {
+                        CollectData(sarcFileName, sarcFileData, version);
+                        break;
+                    }
+                    default: {
+                        CollectData($"{canonical}/{sarcFileName}", sarcFileData, version);
+                        break;
+                    }
+                }
             }
         }
 
@@ -135,35 +139,33 @@ public class HashCollector(string[] sourceFolders)
     private void CollectChecksum(string canonicalFileName, Span<byte> data, int version)
     {
         HashCollectorEntry entry;
+        entry.Version = version;
 
         if (data.IsZsCompressed()) {
             int decompressedSize = data.GetZsDecompressedSize();
             using SpanOwner<byte> decompressed = SpanOwner<byte>.Allocate(decompressedSize);
             data.ZsDecompress(decompressed.Span);
 
-            entry = new() {
-                Hash = XxHash3.HashToUInt64(decompressed.Span),
-                Size = decompressedSize
-            };
+            entry.Hash = XxHash3.HashToUInt64(decompressed.Span);
+            entry.Size = decompressedSize;
         }
         else {
-            entry = new() {
-                Hash = XxHash3.HashToUInt64(data),
-                Size = data.Length
-            };
+            entry.Hash = XxHash3.HashToUInt64(data);
+            entry.Size = data.Length;
         }
 
         lock (_cache) {
-            if (_cache.TryGetValue(canonicalFileName, out HashCollectorEntry? parent)) {
-                if ((parent.Versions.Count == 0 && parent != entry) || parent.Versions.Values.Last() != entry) {
-                    parent.Versions[version] = entry;
+            if (_cache.TryGetValue(canonicalFileName, out HashVersions? versions)) {
+                var (_, size, hash) = versions[^1];
+                if (size != entry.Size || hash != entry.Hash) {
+                    versions.Add(entry);
                 }
 
                 Console.Write($"\r{++_tracking}");
                 return;
             }
 
-            _cache[canonicalFileName] = entry;
+            _cache[canonicalFileName] = [entry];
         }
 
         Console.Write($"\r{++_tracking}");
