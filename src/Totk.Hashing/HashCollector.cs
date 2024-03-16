@@ -32,12 +32,12 @@ public class HashCollector(string[] sourceFolders)
 
     public void Save(Stream stream)
     {
-        stream.Write(_cache.Count);
-        stream.Write(_cache.Count);
-
         foreach (string str in _ignore) {
             _cache.Remove(str);
         }
+
+        stream.Write(_baseVersion);
+        stream.Write(_cache.Count);
 
         foreach ((string key, HashVersions versions) in _cache) {
             stream.Write(TotkChecksums.GetNameHash(key));
