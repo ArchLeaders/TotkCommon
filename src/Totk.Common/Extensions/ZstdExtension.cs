@@ -1,4 +1,5 @@
-﻿using Revrs;
+﻿using CommunityToolkit.HighPerformance.Buffers;
+using Revrs;
 using Revrs.Extensions;
 using SarcLibrary;
 using System.Buffers;
@@ -34,11 +35,9 @@ public static class ZstdExtension
     {
         using FileStream fs = File.OpenRead(file);
         int size = Convert.ToInt32(fs.Length);
-        byte[] buffer = ArrayPool<byte>.Shared.Rent(size);
-        Span<byte> data = buffer.AsSpan()[..size];
-        fs.Read(data);
-        LoadDictionaries(data);
-        ArrayPool<byte>.Shared.Return(buffer);
+        using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(size);
+        fs.Read(buffer.Span);
+        LoadDictionaries(buffer.Span);
     }
 
     public static void LoadDictionaries(Span<byte> data)

@@ -1,7 +1,8 @@
-﻿using Revrs.Extensions;
-using Standart.Hash.xxHash;
-using System.Buffers;
+﻿using CommunityToolkit.HighPerformance.Buffers;
+using Revrs.Extensions;
+using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Hashing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Totk.Common.Extensions;
@@ -12,7 +13,7 @@ namespace Totk.Common.Components;
 public class TotkChecksums
 {
     private readonly int _baseVersion;
-    private readonly Dictionary<ulong, ChecksumEntry> _baseEntries = [];
+    private readonly FrozenDictionary<ulong, ChecksumEntry> _baseEntries;
     private readonly ChecksumEntry[] _entries = [];
 
     public static TotkChecksums FromFile(string checksumCachePath)
@@ -45,13 +46,13 @@ public class TotkChecksums
     public static ulong GetNameHash(ReadOnlySpan<char> canonicalFileName)
     {
         ReadOnlySpan<byte> canonicalFileNameBytes = MemoryMarshal.Cast<char, byte>(canonicalFileName);
-        return xxHash64.ComputeHash(canonicalFileNameBytes, canonicalFileNameBytes.Length);
+        return XxHash3.HashToUInt64(canonicalFileNameBytes);
     }
 
     private TotkChecksums(int baseVersion, Dictionary<ulong, ChecksumEntry> baseEntries, ChecksumEntry[] entries)
     {
         _baseVersion = baseVersion;
-        _baseEntries = baseEntries;
+        _baseEntries = baseEntries.ToFrozenDictionary();
         _entries = entries;
     }
 
@@ -95,12 +96,10 @@ public class TotkChecksums
         }
 
         int size = Convert.ToInt32(fileInfo.Length);
-        byte[] buffer = ArrayPool<byte>.Shared.Rent(size);
-        Span<byte> data = buffer.AsSpan()[..size];
-        fs.Read(data);
+        using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(size);
+        fs.Read(buffer.Span);
 
-        bool result = CheckData(data, checksumEntry, decompresedSize);
-        ArrayPool<byte>.Shared.Return(buffer);
+        bool result = CheckData(buffer.Span, checksumEntry, decompresedSize);
         return result;
     }
 
@@ -124,15 +123,13 @@ public class TotkChecksums
     private static bool CheckData(Span<byte> data, in ChecksumEntry entry, int decompressedSize)
     {
         if (decompressedSize > 0) {
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(decompressedSize);
-            Span<byte> decompressed = buffer.AsSpan()[..decompressedSize];
-            data.ZsDecompress(decompressed);
-            bool isMatch = xxHash64.ComputeHash(decompressed, decompressedSize) == entry.Checksum;
-            ArrayPool<byte>.Shared.Return(buffer);
+            using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(decompressedSize);
+            data.ZsDecompress(buffer.Span);
+            bool isMatch = XxHash3.HashToUInt64(buffer.Span) == entry.Checksum;
             return isMatch;
         }
 
-        return xxHash64.ComputeHash(data, data.Length) == entry.Checksum;
+        return XxHash3.HashToUInt64(data) == entry.Checksum;
     }
 
     private bool Lookup(ReadOnlySpan<char> canonicalFileName, int version, [MaybeNullWhen(false)] out ChecksumEntry entry)
