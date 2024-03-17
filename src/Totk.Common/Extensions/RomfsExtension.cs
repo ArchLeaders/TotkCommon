@@ -1,4 +1,7 @@
-﻿namespace Totk.Common.Extensions;
+﻿using CommunityToolkit.HighPerformance.Buffers;
+using System.Runtime.CompilerServices;
+
+namespace Totk.Common.Extensions;
 
 [Flags]
 public enum RomfsFileAttributes
@@ -11,76 +14,112 @@ public enum RomfsFileAttributes
 
 public static partial class RomfsExtension
 {
-    public static string ToCanonical(this string file, string romfs)
-    {
-        return file.ToCanonical(romfs, out _);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ReadOnlySpan<char> ToCanonical(this string fileRelativeToRomfs)
+        => ToCanonical(fileRelativeToRomfs.AsSpan(), [], out _);
 
-    public static string ToCanonical(this string file, string romfs, out RomfsFileAttributes attributes)
-    {
-        return Path.GetRelativePath(romfs, file).ToCanonical(out attributes);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ReadOnlySpan<char> ToCanonical(this ReadOnlySpan<char> fileRelativeToRomfs)
+        => ToCanonical(fileRelativeToRomfs, [], out _);
 
-    public static string ToCanonical(this string fileRelativeToRomfs)
-    {
-        return fileRelativeToRomfs.ToCanonical(out _);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ReadOnlySpan<char> ToCanonical(this string fileRelativeToRomfs, out RomfsFileAttributes attributes)
+        => ToCanonical(fileRelativeToRomfs, [], out attributes);
 
-    public static string ToCanonical(this string fileRelativeToRomfs, out RomfsFileAttributes attributes)
-    {
-        attributes = RomfsFileAttributes.None;
-        ReadOnlySpan<char> path = fileRelativeToRomfs;
-        ReadOnlySpan<char> ext = Path.GetExtension(path);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ReadOnlySpan<char> ToCanonical(this ReadOnlySpan<char> fileRelativeToRomfs, out RomfsFileAttributes attributes)
+        => ToCanonical(fileRelativeToRomfs, [], out attributes);
 
-        if (ext.Length != 3) {
-            return ToCanonicalInternal(path, ref attributes);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ReadOnlySpan<char> ToCanonical(this string file, ReadOnlySpan<char> romfs)
+        => ToCanonical(file.AsSpan(), romfs, out _);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ReadOnlySpan<char> ToCanonical(this string file, ReadOnlySpan<char> romfs, out RomfsFileAttributes attributes)
+        => ToCanonical(file.AsSpan(), romfs, out attributes);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ReadOnlySpan<char> ToCanonical(this ReadOnlySpan<char> file, ReadOnlySpan<char> romfs)
+        => ToCanonical(file, romfs, out _);
+
+    public static unsafe ReadOnlySpan<char> ToCanonical(this ReadOnlySpan<char> file, ReadOnlySpan<char> romfs, out RomfsFileAttributes attributes)
+    {
+        if (file.Length < romfs.Length) {
+            throw new ArgumentException($"""
+                The provided {nameof(romfs)} path is longer than the input {nameof(file)}.
+                """, nameof(romfs));
         }
 
-        if (ext is ".zs") {
-            attributes |= RomfsFileAttributes.HasZsExtension;
-            ext = Path.GetExtension(path = path[..^3]);
+        attributes = 0;
+
+        int size = file.Length - romfs.Length - file[^3..] switch {
+            ".zs" => (int)(attributes |= RomfsFileAttributes.HasZsExtension) + 2,
+            ".mc" => (int)(attributes |= RomfsFileAttributes.HasMcExtension) + 1,
+            _ => 0
+        };
+
+        Span<char> canonical;
+
+        fixed (char* ptr = &file[romfs.Length]) {
+            canonical = new(ptr, size);
         }
 
-        if (ext is ".mc") {
-            attributes |= RomfsFileAttributes.HasMcExtension;
-            path = path[..^3];
+        int state = 0;
+        for (int i = 0; i < size; i++) {
+            ref char @char = ref canonical[i];
+
+            state = (@char, size - i) switch {
+                ('.', > 8) => canonical[i..(i + 8)] switch {
+                    ".Product" => (int)(attributes |= RomfsFileAttributes.IsProductFile) * (size -= 4) * (i += 8) + 1,
+                    _ => state
+                },
+                _ => state
+            };
+
+            @char = state switch {
+                0 => @char,
+                _ => @char = canonical[i + 4]
+            };
+
+            @char = @char switch {
+                '\\' => '/',
+                _ => @char
+            };
         }
 
-        return ToCanonicalInternal(path, ref attributes);
+        return canonical[0] switch {
+            '/' => canonical[1..size],
+            _ => canonical[..size]
+        };
+    }
+
+    public static int GetRomfsVersion(this string romfs)
+    {
+        string regionLangMaskPath = Path.Combine(romfs, "System", "RegionLangMask.txt");
+        return File.Exists(regionLangMaskPath) switch {
+            true => ParseRegionLangMaskVersion(regionLangMaskPath),
+            false => throw new FileNotFoundException($"""
+                A RegionLangMask file could not be found: '{regionLangMaskPath}'
+                """),
+        };
     }
 
     public static int GetRomfsVersionOrDefault(this string romfs, int @default = 100)
     {
-        string regionLangMask = Path.Combine(romfs, "System", "RegionLangMask.txt");
-        if (File.Exists(regionLangMask)) {
-            string[] lines = File.ReadAllLines(regionLangMask);
-            if (lines.Length >= 3 && int.TryParse(lines[2], out int value)) {
-                return value;
-            }
-        }
-
-        return @default;
+        string regionLangMaskPath = Path.Combine(romfs, "System", "RegionLangMask.txt");
+        return File.Exists(regionLangMaskPath) switch {
+            true => ParseRegionLangMaskVersion(regionLangMaskPath),
+            false => @default,
+        };
     }
 
-    private static string ToCanonicalInternal(ReadOnlySpan<char> path, ref RomfsFileAttributes attributes)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int ParseRegionLangMaskVersion(string regionLangMaskPath)
     {
-        Span<char> result = path.Length > 0x1000
-            ? new char[path.Length] : stackalloc char[path.Length];
-        path.Replace(result, '\\', '/');
-
-        ReadOnlySpan<char> name = Path.GetFileName(path);
-        int firstExtensionDelimiter = name.IndexOf('.');
-        int supposedNextDelimiter = firstExtensionDelimiter + 8;
-        if (name.Length > supposedNextDelimiter && name[supposedNextDelimiter] is '.' && name[++firstExtensionDelimiter..supposedNextDelimiter] is "Product") {
-            attributes |= RomfsFileAttributes.IsProductFile;
-            supposedNextDelimiter += 4;
-            while (name.Length > ++supposedNextDelimiter) {
-                result[^(name.Length - supposedNextDelimiter + 4)] = name[supposedNextDelimiter];
-            }
-
-            result = result[..^4];
-        }
-
-        return new string(result);
+        using FileStream fs = File.OpenRead(regionLangMaskPath);
+        int size = Convert.ToInt32(fs.Length);
+        using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(size);
+        int lastNewlineIndex = buffer.Span.LastIndexOf((byte)'\n');
+        return int.Parse(buffer.Span[(lastNewlineIndex - 3)..lastNewlineIndex]);
     }
 }
