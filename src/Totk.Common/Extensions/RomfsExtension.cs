@@ -58,9 +58,13 @@ public static partial class RomfsExtension
             _ => 0
         };
 
+        // Make a copy to avoid
+        // mutating the input string
+        string result = file[romfs.Length..(romfs.Length + size)].ToString();
+
         Span<char> canonical;
 
-        fixed (char* ptr = &file[romfs.Length]) {
+        fixed (char* ptr = result) {
             canonical = new(ptr, size);
         }
 
