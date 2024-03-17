@@ -99,9 +99,9 @@ public class TotkChecksums
         return result;
     }
 
-    public bool IsFileVanilla(ReadOnlySpan<char> canonicalFileName, Span<byte> fileData, int romfsVersion)
+    public bool IsFileVanilla(ReadOnlySpan<char> fileName, Span<byte> fileData, int romfsVersion)
     {
-        if (!Lookup(canonicalFileName, romfsVersion, out ChecksumEntry entry)) {
+        if (!Lookup(fileName.ToCanonical(), romfsVersion, out ChecksumEntry entry)) {
             return false;
         }
 
