@@ -90,7 +90,7 @@ public class HashCollector(string[] sourceFolders)
 
     private void CollectDiskFile(string filePath, string romfs, int version)
     {
-        string canonical = filePath.ToCanonical(romfs, out RomfsFileAttributes attributes);
+        string canonical = filePath.ToCanonical(romfs, out RomfsFileAttributes attributes).ToString();
         if (attributes.HasFlag(RomfsFileAttributes.HasMcExtension)) {
             // MC files are skipped until
             // decompression is possible
