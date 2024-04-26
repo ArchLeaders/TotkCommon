@@ -84,7 +84,7 @@ public class TotkChecksums
         if (isZsCompressed) {
             // Check the file size of compressed
             // targets before reading the file.
-            if ((decompresedSize = fs.GetZsDecompressedSize()) != checksumEntry.Size) {
+            if ((decompresedSize = Zstd.GetDecompressedSize(fs)) != checksumEntry.Size) {
                 return false;
             }
 
@@ -106,7 +106,7 @@ public class TotkChecksums
         }
 
         int decompressedSize = -1;
-        if (fileData.IsZsCompressed() && (decompressedSize = fileData.GetZsDecompressedSize()) != entry.Size) {
+        if (Zstd.IsCompressed(fileData) && (decompressedSize = Zstd.GetDecompressedSize(fileData)) != entry.Size) {
             return false;
         }
         else if (entry.Size != fileData.Length) {
@@ -120,7 +120,7 @@ public class TotkChecksums
     {
         if (decompressedSize > 0) {
             using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(decompressedSize);
-            data.ZsDecompress(buffer.Span);
+            Zstd.Shared.Decompress(data, buffer.Span);
             bool isMatch = XxHash3.HashToUInt64(buffer.Span) == entry.Hash;
             return isMatch;
         }

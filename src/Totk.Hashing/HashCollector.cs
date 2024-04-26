@@ -5,6 +5,7 @@ using SarcLibrary;
 using System.Buffers;
 using System.IO.Hashing;
 using System.Text.Json;
+using Totk.Common;
 using Totk.Common.Components;
 using Totk.Common.Extensions;
 using Totk.Hashing.Models;
@@ -69,7 +70,7 @@ public class HashCollector(string[] sourceFolders)
                 _baseVersion = version;
             }
 
-            ZstdExtension.LoadDictionaries(zsDicPack);
+            Zstd.Shared.LoadDictionaries(zsDicPack);
             await CollectDiskDirectory(folder, folder, version);
 
             Console.WriteLine($"\n[{DateTime.Now:t}] Completed {folder}");
@@ -103,9 +104,9 @@ public class HashCollector(string[] sourceFolders)
         fs.Read(buffer.Span);
 
         if (attributes.HasFlag(RomfsFileAttributes.HasZsExtension)) {
-            int decompressedSize = buffer.Span.GetZsDecompressedSize();
+            int decompressedSize = Zstd.GetDecompressedSize(buffer.Span);
             using SpanOwner<byte> decompressed = SpanOwner<byte>.Allocate(decompressedSize);
-            buffer.Span.ZsDecompress(decompressed.Span);
+            Zstd.Shared.Decompress(buffer.Span, decompressed.Span);
             CollectData(canonical, decompressed.Span, version);
             return;
         }
@@ -141,10 +142,10 @@ public class HashCollector(string[] sourceFolders)
         HashCollectorEntry entry;
         entry.Version = version;
 
-        if (data.IsZsCompressed()) {
-            int decompressedSize = data.GetZsDecompressedSize();
+        if (Zstd.IsCompressed(data)) {
+            int decompressedSize = Zstd.GetDecompressedSize(data);
             using SpanOwner<byte> decompressed = SpanOwner<byte>.Allocate(decompressedSize);
-            data.ZsDecompress(decompressed.Span);
+            Zstd.Shared.Decompress(data, decompressed.Span);
 
             entry.Hash = XxHash3.HashToUInt64(decompressed.Span);
             entry.Size = decompressedSize;
