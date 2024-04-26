@@ -1,7 +1,8 @@
-﻿using Totk.Hashing;
+﻿using TotkHashing;
 
-if (args.Length < 2) {
-    Console.WriteLine("""
+if (args.Length < 2)
+{
+  Console.WriteLine("""
         Invalid arguments, expected a list of game paths and an output file.
 
         Example:
@@ -16,10 +17,11 @@ string output = args[^1];
 string[] inputs = args[..^1];
 
 bool writeDebugFile = false;
-if (output is "-d" or "--debug") {
-    writeDebugFile = true;
-    output = args[^2];
-    inputs = args[..^2];
+if (output is "-d" or "--debug")
+{
+  writeDebugFile = true;
+  output = args[^2];
+  inputs = args[..^2];
 }
 
 HashCollector collector = new(inputs);
@@ -28,7 +30,8 @@ await collector.Collect();
 using FileStream fs = File.Create(output);
 collector.Save(fs);
 
-if (writeDebugFile) {
-    using FileStream fsDebug = File.Create(Path.ChangeExtension(output, ".json"));
-    collector.SaveDebug(fsDebug);
+if (writeDebugFile)
+{
+  using FileStream fsDebug = File.Create(Path.ChangeExtension(output, ".json"));
+  collector.SaveDebug(fsDebug);
 }

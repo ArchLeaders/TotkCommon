@@ -1,23 +1,24 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Totk.Common;
+namespace TotkCommon;
 
-public class TotK
+public class Totk
 {
     private static readonly string _path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "totk", "Config.json");
 
-    public static TotK Config { get; }
+    public static Totk Config { get; }
     public static Zstd Zstd { get; }
 
-    static TotK()
+    static Totk()
     {
-        if (!File.Exists(_path)) {
+        if (!File.Exists(_path))
+        {
             Config = new();
         }
 
         using FileStream fs = File.OpenRead(_path);
-        Config = JsonSerializer.Deserialize<TotK>(fs)
+        Config = JsonSerializer.Deserialize<Totk>(fs)
             ?? new();
 
         Zstd = new();
@@ -25,9 +26,11 @@ public class TotK
     }
 
     private string _gamePath = string.Empty;
-    public string GamePath {
+    public string GamePath
+    {
         get => _gamePath;
-        set {
+        set
+        {
             _gamePath = value;
             Zstd.LoadDictionaries(ZsDicPath);
         }

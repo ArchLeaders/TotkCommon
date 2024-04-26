@@ -5,7 +5,7 @@ using SarcLibrary;
 using System.Buffers;
 using ZstdSharp;
 
-namespace Totk.Common;
+namespace TotkCommon;
 
 public class Zstd
 {
@@ -21,13 +21,16 @@ public class Zstd
     private readonly Dictionary<int, Compressor> _compressors = [];
 
     private int _compressionLevel = 17;
-    public int CompressionLevel {
+    public int CompressionLevel
+    {
         get => _compressionLevel;
-        set {
+        set
+        {
             _compressionLevel = value;
             _defaultCompressor.Level = _compressionLevel;
 
-            foreach (var (_, compressor) in _compressors) {
+            foreach (var (_, compressor) in _compressors)
+            {
                 compressor.Level = value;
             }
         }
@@ -58,21 +61,25 @@ public class Zstd
 
     public void Decompress(ReadOnlySpan<byte> data, Span<byte> dst, out int zsDictionaryId)
     {
-        if (!IsCompressed(data)) {
+        if (!IsCompressed(data))
+        {
             zsDictionaryId = -1;
             return;
         }
 
         zsDictionaryId = GetDictionaryId(data);
-        if (_decompressors.TryGetValue(zsDictionaryId, out Decompressor? decompressor)) {
-            lock (_decompressors) {
+        if (_decompressors.TryGetValue(zsDictionaryId, out Decompressor? decompressor))
+        {
+            lock (_decompressors)
+            {
                 decompressor.Unwrap(data, dst);
             }
 
             return;
         }
 
-        lock (_defaultDecompressor) {
+        lock (_defaultDecompressor)
+        {
             _defaultDecompressor.Unwrap(data, dst);
         }
     }
@@ -87,7 +94,8 @@ public class Zstd
 
     public int Compress(ReadOnlySpan<byte> data, Span<byte> dst, int zsDictionaryId = -1)
     {
-        return _compressors.TryGetValue(zsDictionaryId, out Compressor? compressor) switch {
+        return _compressors.TryGetValue(zsDictionaryId, out Compressor? compressor) switch
+        {
             true => compressor.Wrap(data, dst),
             false => _defaultCompressor.Wrap(data, dst)
         };
@@ -106,7 +114,8 @@ public class Zstd
     {
         byte[]? decompressedBuffer = null;
 
-        if (IsCompressed(data)) {
+        if (IsCompressed(data))
+        {
             int decompressedSize = GetDecompressedSize(data);
             decompressedBuffer = ArrayPool<byte>.Shared.Rent(decompressedSize);
             Span<byte> decompressed = decompressedBuffer.AsSpan()[..decompressedSize];
@@ -114,28 +123,33 @@ public class Zstd
             data = decompressed;
         }
 
-        if (TryLoadDictionary(data)) {
+        if (TryLoadDictionary(data))
+        {
             return;
         }
 
-        if (data.Length < 8 || data.Read<uint>() != SARC_MAGIC) {
+        if (data.Length < 8 || data.Read<uint>() != SARC_MAGIC)
+        {
             return;
         }
 
         RevrsReader reader = new(data);
         ImmutableSarc sarc = new(ref reader);
-        foreach ((string _, Span<byte> sarcFileData) in sarc) {
+        foreach ((string _, Span<byte> sarcFileData) in sarc)
+        {
             TryLoadDictionary(sarcFileData);
         }
 
-        if (decompressedBuffer is not null) {
+        if (decompressedBuffer is not null)
+        {
             ArrayPool<byte>.Shared.Return(decompressedBuffer);
         }
     }
 
     private bool TryLoadDictionary(ReadOnlySpan<byte> buffer)
     {
-        if (buffer.Length < 8 || buffer.Read<uint>() != DICT_MAGIC) {
+        if (buffer.Length < 8 || buffer.Read<uint>() != DICT_MAGIC)
+        {
             return false;
         }
 
@@ -173,7 +187,8 @@ public class Zstd
         int windowDescriptorSize = ((descriptor & 0b00100000) >> 5) ^ 0b1;
         int dictionaryIdFlag = descriptor & 0b00000011;
 
-        return dictionaryIdFlag switch {
+        return dictionaryIdFlag switch
+        {
             0x0 => -1,
             0x1 => buffer[5 + windowDescriptorSize],
             0x2 => buffer[(5 + windowDescriptorSize)..].Read<ushort>(),
@@ -191,7 +206,8 @@ public class Zstd
         int dictionaryIdFlag = descriptor & 0b00000011;
         int frameContentFlag = descriptor >> 6;
 
-        int offset = dictionaryIdFlag switch {
+        int offset = dictionaryIdFlag switch
+        {
             0x0 => 5 + windowDescriptorSize,
             0x1 => 5 + windowDescriptorSize + 1,
             0x2 => 5 + windowDescriptorSize + 2,
@@ -201,7 +217,8 @@ public class Zstd
                 """)
         };
 
-        return frameContentFlag switch {
+        return frameContentFlag switch
+        {
             0x0 => buffer[offset],
             0x1 => buffer[offset..].Read<ushort>() + 0x100,
             0x2 => buffer[offset..].Read<int>(),

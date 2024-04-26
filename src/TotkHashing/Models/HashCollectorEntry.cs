@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Totk.Hashing.Models;
+namespace TotkHashing.Models;
 
 public struct HashCollectorEntry
 {

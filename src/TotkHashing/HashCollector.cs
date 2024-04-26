@@ -5,19 +5,20 @@ using SarcLibrary;
 using System.Buffers;
 using System.IO.Hashing;
 using System.Text.Json;
-using Totk.Common;
-using Totk.Common.Components;
-using Totk.Common.Extensions;
-using Totk.Hashing.Models;
-using HashVersions = System.Collections.Generic.List<Totk.Hashing.Models.HashCollectorEntry>;
+using TotkCommon;
+using TotkCommon.Components;
+using TotkCommon.Extensions;
+using TotkHashing.Models;
+using HashVersions = System.Collections.Generic.List<TotkHashing.Models.HashCollectorEntry>;
 
-namespace Totk.Hashing;
+namespace TotkHashing;
 
 public class HashCollector(string[] sourceFolders)
 {
     private const uint SARC_MAGIC = 0x43524153;
 
-    public static readonly JsonSerializerOptions _jsonOptions = new() {
+    public static readonly JsonSerializerOptions _jsonOptions = new()
+    {
         WriteIndented = true
     };
 
@@ -33,18 +34,21 @@ public class HashCollector(string[] sourceFolders)
 
     public void Save(Stream stream)
     {
-        foreach (string str in _ignore) {
+        foreach (string str in _ignore)
+        {
             _cache.Remove(str);
         }
 
         stream.Write(_baseVersion);
         stream.Write(_cache.Count);
 
-        foreach ((string key, HashVersions versions) in _cache) {
+        foreach ((string key, HashVersions versions) in _cache)
+        {
             stream.Write(TotkChecksums.GetNameHash(key));
             stream.Write(versions.Count);
 
-            foreach (var (version, size, hash) in versions) {
+            foreach (var (version, size, hash) in versions)
+            {
                 stream.Write(version);
                 stream.Write(size);
                 stream.Write(hash);
@@ -59,14 +63,17 @@ public class HashCollector(string[] sourceFolders)
 
     public async Task Collect()
     {
-        foreach (string folder in _sourceFolders) {
+        foreach (string folder in _sourceFolders)
+        {
             string zsDicPack = Path.Combine(folder, "Pack", "ZsDic.pack.zs");
-            if (!File.Exists(zsDicPack)) {
+            if (!File.Exists(zsDicPack))
+            {
                 return;
             }
 
             int version = folder.GetRomfsVersionOrDefault();
-            if (_baseVersion < 0) {
+            if (_baseVersion < 0)
+            {
                 _baseVersion = version;
             }
 
@@ -80,11 +87,13 @@ public class HashCollector(string[] sourceFolders)
 
     private async Task CollectDiskDirectory(string directory, string romfs, int version)
     {
-        await Parallel.ForEachAsync(Directory.EnumerateFiles(directory), async (file, cancellationToken) => {
+        await Parallel.ForEachAsync(Directory.EnumerateFiles(directory), async (file, cancellationToken) =>
+        {
             await Task.Run(() => CollectDiskFile(file, romfs, version), cancellationToken);
         });
 
-        await Parallel.ForEachAsync(Directory.EnumerateDirectories(directory), async (folder, cancellationToken) => {
+        await Parallel.ForEachAsync(Directory.EnumerateDirectories(directory), async (folder, cancellationToken) =>
+        {
             await CollectDiskDirectory(folder, romfs, version);
         });
     }
@@ -92,7 +101,8 @@ public class HashCollector(string[] sourceFolders)
     private void CollectDiskFile(string filePath, string romfs, int version)
     {
         string canonical = filePath.ToCanonical(romfs, out RomfsFileAttributes attributes).ToString();
-        if (attributes.HasFlag(RomfsFileAttributes.HasMcExtension)) {
+        if (attributes.HasFlag(RomfsFileAttributes.HasMcExtension))
+        {
             // MC files are skipped until
             // decompression is possible
             return;
@@ -103,7 +113,8 @@ public class HashCollector(string[] sourceFolders)
         using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(size);
         fs.Read(buffer.Span);
 
-        if (attributes.HasFlag(RomfsFileAttributes.HasZsExtension)) {
+        if (attributes.HasFlag(RomfsFileAttributes.HasZsExtension))
+        {
             int decompressedSize = Zstd.GetDecompressedSize(buffer.Span);
             using SpanOwner<byte> decompressed = SpanOwner<byte>.Allocate(decompressedSize);
             Zstd.Shared.Decompress(buffer.Span, decompressed.Span);
@@ -116,20 +127,25 @@ public class HashCollector(string[] sourceFolders)
 
     private void CollectData(string canonical, Span<byte> data, int version)
     {
-        if (data.Length > 3 && data.Read<uint>() == SARC_MAGIC) {
+        if (data.Length > 3 && data.Read<uint>() == SARC_MAGIC)
+        {
             ReadOnlySpan<char> ext = Path.GetExtension(canonical.AsSpan());
             RevrsReader reader = new(data);
             ImmutableSarc sarc = new(ref reader);
-            foreach ((string sarcFileName, Span<byte> sarcFileData) in sarc) {
-                switch (ext) {
-                    case ".pack": {
-                        CollectData(sarcFileName, sarcFileData, version);
-                        break;
-                    }
-                    default: {
-                        CollectData($"{canonical}/{sarcFileName}", sarcFileData, version);
-                        break;
-                    }
+            foreach ((string sarcFileName, Span<byte> sarcFileData) in sarc)
+            {
+                switch (ext)
+                {
+                    case ".pack":
+                        {
+                            CollectData(sarcFileName, sarcFileData, version);
+                            break;
+                        }
+                    default:
+                        {
+                            CollectData($"{canonical}/{sarcFileName}", sarcFileData, version);
+                            break;
+                        }
                 }
             }
         }
@@ -142,7 +158,8 @@ public class HashCollector(string[] sourceFolders)
         HashCollectorEntry entry;
         entry.Version = version;
 
-        if (Zstd.IsCompressed(data)) {
+        if (Zstd.IsCompressed(data))
+        {
             int decompressedSize = Zstd.GetDecompressedSize(data);
             using SpanOwner<byte> decompressed = SpanOwner<byte>.Allocate(decompressedSize);
             Zstd.Shared.Decompress(data, decompressed.Span);
@@ -150,15 +167,19 @@ public class HashCollector(string[] sourceFolders)
             entry.Hash = XxHash3.HashToUInt64(decompressed.Span);
             entry.Size = decompressedSize;
         }
-        else {
+        else
+        {
             entry.Hash = XxHash3.HashToUInt64(data);
             entry.Size = data.Length;
         }
 
-        lock (_cache) {
-            if (_cache.TryGetValue(canonicalFileName, out HashVersions? versions)) {
+        lock (_cache)
+        {
+            if (_cache.TryGetValue(canonicalFileName, out HashVersions? versions))
+            {
                 var (_, size, hash) = versions[^1];
-                if (size != entry.Size || hash != entry.Hash) {
+                if (size != entry.Size || hash != entry.Hash)
+                {
                     versions.Add(entry);
                 }
 

@@ -1,7 +1,7 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
 using System.Runtime.CompilerServices;
 
-namespace Totk.Common.Extensions;
+namespace TotkCommon.Extensions;
 
 [Flags]
 public enum RomfsFileAttributes
@@ -44,7 +44,8 @@ public static partial class RomfsExtension
 
     public static unsafe ReadOnlySpan<char> ToCanonical(this ReadOnlySpan<char> file, ReadOnlySpan<char> romfs, out RomfsFileAttributes attributes)
     {
-        if (file.Length < romfs.Length) {
+        if (file.Length < romfs.Length)
+        {
             throw new ArgumentException($"""
                 The provided {nameof(romfs)} path is longer than the input {nameof(file)}.
                 """, nameof(romfs));
@@ -52,7 +53,8 @@ public static partial class RomfsExtension
 
         attributes = 0;
 
-        int size = file.Length - romfs.Length - file[^3..] switch {
+        int size = file.Length - romfs.Length - file[^3..] switch
+        {
             ".zs" => (int)(attributes |= RomfsFileAttributes.HasZsExtension) + 2,
             ".mc" => (int)(attributes |= RomfsFileAttributes.HasMcExtension) + 1,
             _ => 0
@@ -64,34 +66,41 @@ public static partial class RomfsExtension
 
         Span<char> canonical;
 
-        fixed (char* ptr = result) {
+        fixed (char* ptr = result)
+        {
             canonical = new(ptr, size);
         }
 
         int state = 0;
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++)
+        {
             ref char @char = ref canonical[i];
 
-            state = (@char, size - i) switch {
-                ('.', > 8) => canonical[i..(i + 8)] switch {
+            state = (@char, size - i) switch
+            {
+                ('.', > 8) => canonical[i..(i + 8)] switch
+                {
                     ".Product" => (int)(attributes |= RomfsFileAttributes.IsProductFile) * (size -= 4) * (i += 8) + 1,
                     _ => state
                 },
                 _ => state
             };
 
-            @char = state switch {
+            @char = state switch
+            {
                 0 => @char,
                 _ => @char = canonical[i + 4]
             };
 
-            @char = @char switch {
+            @char = @char switch
+            {
                 '\\' => '/',
                 _ => @char
             };
         }
 
-        return canonical[0] switch {
+        return canonical[0] switch
+        {
             '/' => canonical[1..size],
             _ => canonical[..size]
         };
@@ -100,7 +109,8 @@ public static partial class RomfsExtension
     public static int GetRomfsVersion(this string romfs)
     {
         string regionLangMaskPath = Path.Combine(romfs, "System", "RegionLangMask.txt");
-        return File.Exists(regionLangMaskPath) switch {
+        return File.Exists(regionLangMaskPath) switch
+        {
             true => ParseRegionLangMaskVersion(regionLangMaskPath),
             false => throw new FileNotFoundException($"""
                 A RegionLangMask file could not be found: '{regionLangMaskPath}'
@@ -111,7 +121,8 @@ public static partial class RomfsExtension
     public static int GetRomfsVersionOrDefault(this string romfs, int @default = 100)
     {
         string regionLangMaskPath = Path.Combine(romfs, "System", "RegionLangMask.txt");
-        return File.Exists(regionLangMaskPath) switch {
+        return File.Exists(regionLangMaskPath) switch
+        {
             true => ParseRegionLangMaskVersion(regionLangMaskPath),
             false => @default,
         };

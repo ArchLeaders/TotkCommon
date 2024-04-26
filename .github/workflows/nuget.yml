@@ -7,13 +7,13 @@ on:
 
 env:
   nuget: "https://api.nuget.org/v3/index.json"
-  project_name: Totk.Common
+  project_name: TotkCommon
   authors: ArchLeaders
   description: |-
     Simple primitives library for common TotK operations
   readme: ./Readme.md
   icon: ./Icon.png
-  repo: https://github.com/ArchLeaders/Totk.Common
+  repo: https://github.com/ArchLeaders/TotkCommon
   spdx: MIT
   tags: totk;zelda;zeldamods
 

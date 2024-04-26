@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Totk.Common\Totk.Common.csproj" />
+    <ProjectReference Include="..\TotkCommon\TotkCommon.csproj" />
   </ItemGroup>
 
 </Project>

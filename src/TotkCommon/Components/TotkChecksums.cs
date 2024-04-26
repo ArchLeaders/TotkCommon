@@ -4,10 +4,10 @@ using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Hashing;
 using System.Runtime.InteropServices;
-using Totk.Common.Extensions;
-using Totk.Common.Models;
+using TotkCommon.Extensions;
+using TotkCommon.Models;
 
-namespace Totk.Common.Components;
+namespace TotkCommon.Components;
 
 public class TotkChecksums
 {
@@ -26,11 +26,13 @@ public class TotkChecksums
         int entryCount = stream.Read<int>();
 
         Dictionary<ulong, ChecksumEntry[]> entries = [];
-        for (int i = 0; i < entryCount; i++) {
+        for (int i = 0; i < entryCount; i++)
+        {
             ulong key = stream.Read<ulong>();
             int count = stream.Read<int>();
             ChecksumEntry[] versions = new ChecksumEntry[count];
-            for (int j = 0; j < count; j++) {
+            for (int j = 0; j < count; j++)
+            {
                 versions[j] = stream.Read<ChecksumEntry>();
             }
 
@@ -66,7 +68,8 @@ public class TotkChecksums
 
     public bool IsFileVanilla(ReadOnlySpan<char> canonicalFileName, FileInfo fileInfo, RomfsFileAttributes romfsFileAttributes, int romfsVersion)
     {
-        if (!Lookup(canonicalFileName, romfsVersion, out ChecksumEntry checksumEntry)) {
+        if (!Lookup(canonicalFileName, romfsVersion, out ChecksumEntry checksumEntry))
+        {
             return false;
         }
 
@@ -74,17 +77,20 @@ public class TotkChecksums
 
         // Check the file size of decompressed
         // targets before reading the file.
-        if (isZsCompressed == false && checksumEntry.Size != fileInfo.Length) {
+        if (isZsCompressed == false && checksumEntry.Size != fileInfo.Length)
+        {
             return false;
         }
 
         int decompresedSize = -1;
         using FileStream fs = fileInfo.OpenRead();
 
-        if (isZsCompressed) {
+        if (isZsCompressed)
+        {
             // Check the file size of compressed
             // targets before reading the file.
-            if ((decompresedSize = Zstd.GetDecompressedSize(fs)) != checksumEntry.Size) {
+            if ((decompresedSize = Zstd.GetDecompressedSize(fs)) != checksumEntry.Size)
+            {
                 return false;
             }
 
@@ -101,15 +107,18 @@ public class TotkChecksums
 
     public bool IsFileVanilla(ReadOnlySpan<char> fileName, Span<byte> fileData, int romfsVersion)
     {
-        if (!Lookup(fileName.ToCanonical(), romfsVersion, out ChecksumEntry entry)) {
+        if (!Lookup(fileName.ToCanonical(), romfsVersion, out ChecksumEntry entry))
+        {
             return false;
         }
 
         int decompressedSize = -1;
-        if (Zstd.IsCompressed(fileData) && (decompressedSize = Zstd.GetDecompressedSize(fileData)) != entry.Size) {
+        if (Zstd.IsCompressed(fileData) && (decompressedSize = Zstd.GetDecompressedSize(fileData)) != entry.Size)
+        {
             return false;
         }
-        else if (entry.Size != fileData.Length) {
+        else if (entry.Size != fileData.Length)
+        {
             return false;
         }
 
@@ -118,7 +127,8 @@ public class TotkChecksums
 
     private static bool CheckData(Span<byte> data, in ChecksumEntry entry, int decompressedSize)
     {
-        if (decompressedSize > 0) {
+        if (decompressedSize > 0)
+        {
             using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(decompressedSize);
             Zstd.Shared.Decompress(data, buffer.Span);
             bool isMatch = XxHash3.HashToUInt64(buffer.Span) == entry.Hash;
@@ -132,19 +142,23 @@ public class TotkChecksums
     {
         ulong key = GetNameHash(canonicalFileName);
 
-        if (_entries.TryGetValue(key, out ChecksumEntry[]? entries) == false) {
+        if (_entries.TryGetValue(key, out ChecksumEntry[]? entries) == false)
+        {
             entry = default;
             return false;
         }
 
         entry = entries[0];
-        if (version == _version) {
+        if (version == _version)
+        {
             return true;
         }
 
-        for (int i = 1; i < entries.Length; i++) {
+        for (int i = 1; i < entries.Length; i++)
+        {
             ref ChecksumEntry next = ref entries[i];
-            if (next.Version > version) {
+            if (next.Version > version)
+            {
                 break;
             }
 

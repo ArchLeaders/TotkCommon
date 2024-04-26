@@ -1,4 +1,4 @@
-﻿namespace Totk.Common.Models;
+﻿namespace TotkCommon.Models;
 
 internal struct ChecksumEntry
 {
