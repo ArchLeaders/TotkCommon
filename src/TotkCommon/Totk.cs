@@ -18,7 +18,7 @@ public class Totk
         }
 
         using FileStream fs = File.OpenRead(_path);
-        Config = JsonSerializer.Deserialize<Totk>(fs)
+        Config = JsonSerializer.Deserialize(fs, TotkConfigSerializerContext.Default.Totk)
             ?? new();
 
         Zstd = new();
@@ -43,7 +43,12 @@ public class Totk
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
         using FileStream fs = File.Create(_path);
-        JsonSerializer.Serialize(fs, this);
+        JsonSerializer.Serialize(fs, this, TotkConfigSerializerContext.Default.Totk);
     }
 }
 
+[JsonSerializable(typeof(Totk))]
+public partial class TotkConfigSerializerContext : JsonSerializerContext
+{
+
+}
