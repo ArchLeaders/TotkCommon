@@ -17,12 +17,11 @@ public class Totk
             Config = new();
         }
 
+        Zstd = new();
+
         using FileStream fs = File.OpenRead(_path);
         Config = JsonSerializer.Deserialize(fs, TotkConfigSerializerContext.Default.Totk)
             ?? new();
-
-        Zstd = new();
-        Zstd.LoadDictionaries(Config.ZsDicPath);
     }
 
     private string _gamePath = string.Empty;
