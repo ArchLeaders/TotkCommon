@@ -2,7 +2,7 @@
 
 if (args.Length < 2)
 {
-  Console.WriteLine("""
+    Console.WriteLine("""
         Invalid arguments, expected a list of game paths and an output file.
 
         Example:
@@ -19,9 +19,9 @@ string[] inputs = args[..^1];
 bool writeDebugFile = false;
 if (output is "-d" or "--debug")
 {
-  writeDebugFile = true;
-  output = args[^2];
-  inputs = args[..^2];
+    writeDebugFile = true;
+    output = args[^2];
+    inputs = args[..^2];
 }
 
 HashCollector collector = new(inputs);
@@ -32,6 +32,6 @@ collector.Save(fs);
 
 if (writeDebugFile)
 {
-  using FileStream fsDebug = File.Create(Path.ChangeExtension(output, ".json"));
-  collector.SaveDebug(fsDebug);
+    using FileStream fsDebug = File.Create(Path.ChangeExtension(output, ".json"));
+    collector.SaveDebug(fsDebug);
 }

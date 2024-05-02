@@ -21,15 +21,13 @@ public class Zstd
     private readonly Dictionary<int, Compressor> _compressors = [];
 
     private int _compressionLevel = 17;
-    public int CompressionLevel
-    {
+    public int CompressionLevel {
         get => _compressionLevel;
-        set
-        {
+        set {
             _compressionLevel = value;
             _defaultCompressor.Level = _compressionLevel;
 
-            foreach (var (_, compressor) in _compressors)
+            foreach ((int _, Compressor compressor) in _compressors)
             {
                 compressor.Level = value;
             }
@@ -94,8 +92,7 @@ public class Zstd
 
     public int Compress(ReadOnlySpan<byte> data, Span<byte> dst, int zsDictionaryId = -1)
     {
-        return _compressors.TryGetValue(zsDictionaryId, out Compressor? compressor) switch
-        {
+        return _compressors.TryGetValue(zsDictionaryId, out Compressor? compressor) switch {
             true => compressor.Wrap(data, dst),
             false => _defaultCompressor.Wrap(data, dst)
         };
@@ -187,8 +184,7 @@ public class Zstd
         int windowDescriptorSize = ((descriptor & 0b00100000) >> 5) ^ 0b1;
         int dictionaryIdFlag = descriptor & 0b00000011;
 
-        return dictionaryIdFlag switch
-        {
+        return dictionaryIdFlag switch {
             0x0 => -1,
             0x1 => buffer[5 + windowDescriptorSize],
             0x2 => buffer[(5 + windowDescriptorSize)..].Read<ushort>(),
@@ -206,8 +202,7 @@ public class Zstd
         int dictionaryIdFlag = descriptor & 0b00000011;
         int frameContentFlag = descriptor >> 6;
 
-        int offset = dictionaryIdFlag switch
-        {
+        int offset = dictionaryIdFlag switch {
             0x0 => 5 + windowDescriptorSize,
             0x1 => 5 + windowDescriptorSize + 1,
             0x2 => 5 + windowDescriptorSize + 2,
@@ -217,8 +212,7 @@ public class Zstd
                 """)
         };
 
-        return frameContentFlag switch
-        {
+        return frameContentFlag switch {
             0x0 => buffer[offset],
             0x1 => buffer[offset..].Read<ushort>() + 0x100,
             0x2 => buffer[offset..].Read<int>(),

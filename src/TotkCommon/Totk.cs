@@ -25,11 +25,9 @@ public class Totk
     }
 
     private string _gamePath = string.Empty;
-    public string GamePath
-    {
+    public string GamePath {
         get => _gamePath;
-        set
-        {
+        set {
             _gamePath = value;
             Zstd.LoadDictionaries(ZsDicPath);
         }

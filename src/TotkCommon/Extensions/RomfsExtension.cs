@@ -16,31 +16,45 @@ public static partial class RomfsExtension
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlySpan<char> ToCanonical(this string fileRelativeToRomfs)
-        => ToCanonical(fileRelativeToRomfs.AsSpan(), [], out _);
+    {
+        return ToCanonical(fileRelativeToRomfs.AsSpan(), [], out _);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlySpan<char> ToCanonical(this ReadOnlySpan<char> fileRelativeToRomfs)
-        => ToCanonical(fileRelativeToRomfs, [], out _);
+    {
+        return ToCanonical(fileRelativeToRomfs, [], out _);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlySpan<char> ToCanonical(this string fileRelativeToRomfs, out RomfsFileAttributes attributes)
-        => ToCanonical(fileRelativeToRomfs, [], out attributes);
+    {
+        return ToCanonical(fileRelativeToRomfs, [], out attributes);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlySpan<char> ToCanonical(this ReadOnlySpan<char> fileRelativeToRomfs, out RomfsFileAttributes attributes)
-        => ToCanonical(fileRelativeToRomfs, [], out attributes);
+    {
+        return ToCanonical(fileRelativeToRomfs, [], out attributes);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlySpan<char> ToCanonical(this string file, ReadOnlySpan<char> romfs)
-        => ToCanonical(file.AsSpan(), romfs, out _);
+    {
+        return ToCanonical(file.AsSpan(), romfs, out _);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlySpan<char> ToCanonical(this string file, ReadOnlySpan<char> romfs, out RomfsFileAttributes attributes)
-        => ToCanonical(file.AsSpan(), romfs, out attributes);
+    {
+        return ToCanonical(file.AsSpan(), romfs, out attributes);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlySpan<char> ToCanonical(this ReadOnlySpan<char> file, ReadOnlySpan<char> romfs)
-        => ToCanonical(file, romfs, out _);
+    {
+        return ToCanonical(file, romfs, out _);
+    }
 
     public static unsafe ReadOnlySpan<char> ToCanonical(this ReadOnlySpan<char> file, ReadOnlySpan<char> romfs, out RomfsFileAttributes attributes)
     {
@@ -53,8 +67,7 @@ public static partial class RomfsExtension
 
         attributes = 0;
 
-        int size = file.Length - romfs.Length - file[^3..] switch
-        {
+        int size = file.Length - romfs.Length - file[^3..] switch {
             ".zs" => (int)(attributes |= RomfsFileAttributes.HasZsExtension) + 2,
             ".mc" => (int)(attributes |= RomfsFileAttributes.HasMcExtension) + 1,
             _ => 0
@@ -76,31 +89,26 @@ public static partial class RomfsExtension
         {
             ref char @char = ref canonical[i];
 
-            state = (@char, size - i) switch
-            {
-                ('.', > 8) => canonical[i..(i + 8)] switch
-                {
-                    ".Product" => (int)(attributes |= RomfsFileAttributes.IsProductFile) * (size -= 4) * (i += 8) + 1,
+            state = (@char, size - i) switch {
+                ('.', > 8) => canonical[i..(i + 8)] switch {
+                    ".Product" => ((int)(attributes |= RomfsFileAttributes.IsProductFile) * (size -= 4) * (i += 8)) + 1,
                     _ => state
                 },
                 _ => state
             };
 
-            @char = state switch
-            {
+            @char = state switch {
                 0 => @char,
                 _ => @char = canonical[i + 4]
             };
 
-            @char = @char switch
-            {
+            @char = @char switch {
                 '\\' => '/',
                 _ => @char
             };
         }
 
-        return canonical[0] switch
-        {
+        return canonical[0] switch {
             '/' => canonical[1..size],
             _ => canonical[..size]
         };
@@ -109,8 +117,7 @@ public static partial class RomfsExtension
     public static int GetRomfsVersion(this string romfs)
     {
         string regionLangMaskPath = Path.Combine(romfs, "System", "RegionLangMask.txt");
-        return File.Exists(regionLangMaskPath) switch
-        {
+        return File.Exists(regionLangMaskPath) switch {
             true => ParseRegionLangMaskVersion(regionLangMaskPath),
             false => throw new FileNotFoundException($"""
                 A RegionLangMask file could not be found: '{regionLangMaskPath}'
@@ -121,8 +128,7 @@ public static partial class RomfsExtension
     public static int GetRomfsVersionOrDefault(this string romfs, int @default = 100)
     {
         string regionLangMaskPath = Path.Combine(romfs, "System", "RegionLangMask.txt");
-        return File.Exists(regionLangMaskPath) switch
-        {
+        return File.Exists(regionLangMaskPath) switch {
             true => ParseRegionLangMaskVersion(regionLangMaskPath),
             false => @default,
         };

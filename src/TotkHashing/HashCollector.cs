@@ -17,8 +17,7 @@ public class HashCollector(string[] sourceFolders)
 {
     private const uint SARC_MAGIC = 0x43524153;
 
-    public static readonly JsonSerializerOptions _jsonOptions = new()
-    {
+    public static readonly JsonSerializerOptions _jsonOptions = new() {
         WriteIndented = true
     };
 
@@ -47,7 +46,7 @@ public class HashCollector(string[] sourceFolders)
             stream.Write(TotkChecksums.GetNameHash(key));
             stream.Write(versions.Count);
 
-            foreach (var (version, size, hash) in versions)
+            foreach ((int version, int size, ulong hash) in versions)
             {
                 stream.Write(version);
                 stream.Write(size);
@@ -87,13 +86,11 @@ public class HashCollector(string[] sourceFolders)
 
     private async Task CollectDiskDirectory(string directory, string romfs, int version)
     {
-        await Parallel.ForEachAsync(Directory.EnumerateFiles(directory), async (file, cancellationToken) =>
-        {
+        await Parallel.ForEachAsync(Directory.EnumerateFiles(directory), async (file, cancellationToken) => {
             await Task.Run(() => CollectDiskFile(file, romfs, version), cancellationToken);
         });
 
-        await Parallel.ForEachAsync(Directory.EnumerateDirectories(directory), async (folder, cancellationToken) =>
-        {
+        await Parallel.ForEachAsync(Directory.EnumerateDirectories(directory), async (folder, cancellationToken) => {
             await CollectDiskDirectory(folder, romfs, version);
         });
     }
@@ -137,15 +134,15 @@ public class HashCollector(string[] sourceFolders)
                 switch (ext)
                 {
                     case ".pack":
-                        {
-                            CollectData(sarcFileName, sarcFileData, version);
-                            break;
-                        }
+                    {
+                        CollectData(sarcFileName, sarcFileData, version);
+                        break;
+                    }
                     default:
-                        {
-                            CollectData($"{canonical}/{sarcFileName}", sarcFileData, version);
-                            break;
-                        }
+                    {
+                        CollectData($"{canonical}/{sarcFileName}", sarcFileData, version);
+                        break;
+                    }
                 }
             }
         }
@@ -177,7 +174,7 @@ public class HashCollector(string[] sourceFolders)
         {
             if (_cache.TryGetValue(canonicalFileName, out HashVersions? versions))
             {
-                var (_, size, hash) = versions[^1];
+                (int _, int size, ulong hash) = versions[^1];
                 if (size != entry.Size || hash != entry.Hash)
                 {
                     versions.Add(entry);
