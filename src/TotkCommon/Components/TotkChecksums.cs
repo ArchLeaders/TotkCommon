@@ -56,19 +56,36 @@ public class TotkChecksums
 
     public bool IsFileVanilla(string filePath, string baseRomfsFolder)
     {
+        return IsFileVanilla(filePath, baseRomfsFolder, out _);
+    }
+
+    public bool IsFileVanilla(string filePath, string baseRomfsFolder, out bool isEntryFound)
+    {
         int romfsVersion = baseRomfsFolder.GetRomfsVersionOrDefault();
-        return IsFileVanilla(filePath, baseRomfsFolder, romfsVersion);
+        return IsFileVanilla(filePath, baseRomfsFolder, romfsVersion, out isEntryFound);
     }
 
     public bool IsFileVanilla(string filePath, string baseRomfsFolder, int romfsVersion)
     {
+        return IsFileVanilla(filePath, baseRomfsFolder, romfsVersion, out _);
+    }
+
+    public bool IsFileVanilla(string filePath, string baseRomfsFolder, int romfsVersion, out bool isEntryFound)
+    {
         ReadOnlySpan<char> canonicalFileName = filePath.ToCanonical(baseRomfsFolder, out RomfsFileAttributes romfsFileAttributes);
-        return IsFileVanilla(canonicalFileName, new FileInfo(filePath), romfsFileAttributes, romfsVersion);
+        return IsFileVanilla(canonicalFileName, 
+            new FileInfo(filePath), romfsFileAttributes, romfsVersion, out isEntryFound
+        );
     }
 
     public bool IsFileVanilla(ReadOnlySpan<char> canonicalFileName, FileInfo fileInfo, RomfsFileAttributes romfsFileAttributes, int romfsVersion)
     {
-        if (!Lookup(canonicalFileName, romfsVersion, out ChecksumEntry checksumEntry))
+        return IsFileVanilla(canonicalFileName, fileInfo, romfsFileAttributes, romfsVersion, out _);
+    }
+
+    public bool IsFileVanilla(ReadOnlySpan<char> canonicalFileName, FileInfo fileInfo, RomfsFileAttributes romfsFileAttributes, int romfsVersion, out bool isEntryFound)
+    {
+        if (!(isEntryFound = Lookup(canonicalFileName, romfsVersion, out ChecksumEntry checksumEntry)))
         {
             return false;
         }
@@ -107,7 +124,12 @@ public class TotkChecksums
 
     public bool IsFileVanilla(ReadOnlySpan<char> canonicalFileName, Span<byte> fileData, int romfsVersion)
     {
-        if (!Lookup(canonicalFileName, romfsVersion, out ChecksumEntry entry))
+        return IsFileVanilla(canonicalFileName, fileData, romfsVersion, out _);
+    }
+
+    public bool IsFileVanilla(ReadOnlySpan<char> canonicalFileName, Span<byte> fileData, int romfsVersion, out bool isEntryFound)
+    {
+        if (!(isEntryFound = Lookup(canonicalFileName, romfsVersion, out ChecksumEntry entry)))
         {
             return false;
         }
