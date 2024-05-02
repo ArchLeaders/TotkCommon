@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using TotkCommon.Extensions;
 
 namespace TotkCommon;
 
@@ -30,11 +31,15 @@ public class Totk
         set {
             _gamePath = value;
             Zstd.LoadDictionaries(ZsDicPath);
+            Version = GamePath.GetRomfsVersionOrDefault(100);
         }
     }
 
     [JsonIgnore]
     public string ZsDicPath => Path.Combine(GamePath, "Pack", "ZsDic.pack.zs");
+
+    [JsonIgnore]
+    public int Version { get; private set; } = 100;
 
     public void Save()
     {
