@@ -141,7 +141,7 @@ public static partial class RomfsExtension
         int size = Convert.ToInt32(fs.Length);
         using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(size);
         fs.Read(buffer.Span);
-        int lastNewlineIndex = buffer.Span.LastIndexOf((byte)'\n');
-        return int.Parse(buffer.Span[(lastNewlineIndex - 3)..lastNewlineIndex]);
+        int lastCaretReturnIndex = buffer.Span.LastIndexOf((byte)'\r');
+        return int.Parse(buffer.Span[(lastCaretReturnIndex - 3)..lastCaretReturnIndex]);
     }
 }
