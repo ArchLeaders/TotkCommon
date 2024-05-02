@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "Tkmm.Hashing": {
+    "TotkHashing": {
       "commandName": "Project",
       "commandLineArgs": "\"F:\\Games\\RomFS\\Totk\\1.1.0\" \"F:\\Games\\RomFS\\Totk\\1.1.1\" \"F:\\Games\\RomFS\\Totk\\1.1.2\" \"F:\\Games\\RomFS\\Totk\\1.2.0\" \"F:\\Games\\RomFS\\Totk\\1.2.1\" \"D:\\bin\\TotkHashing\\Checksums.bin\" --debug"
     }
