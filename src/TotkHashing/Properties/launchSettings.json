@@ -3,6 +3,10 @@
     "TotkHashing": {
       "commandName": "Project",
       "commandLineArgs": "\"F:\\Games\\RomFS\\Totk\\1.1.0\" \"F:\\Games\\RomFS\\Totk\\1.1.1\" \"F:\\Games\\RomFS\\Totk\\1.1.2\" \"F:\\Games\\RomFS\\Totk\\1.2.0\" \"F:\\Games\\RomFS\\Totk\\1.2.1\" \"D:\\bin\\TotkHashing\\Checksums.bin\" --debug"
+    },
+    "Check Game File": {
+      "commandName": "Project",
+      "commandLineArgs": "\"C:\\Users\\ArchLeaders\\Downloads\\ArmorIconToolOptions001\\romfs\\UI\\LayoutArchive\\Common.Product.110.Nin_NX_NVN.blarc\\anim\\InstantTipsWithPict_00_Out.bflan\" \"C:\\Users\\ArchLeaders\\Downloads\\ArmorIconToolOptions001\\romfs\" \"C:\\Users\\ArchLeaders\\AppData\\Local\\Totk\\checksums.bin\""
     }
   }
 }

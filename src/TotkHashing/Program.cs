@@ -1,4 +1,14 @@
-﻿using TotkHashing;
+﻿using TotkCommon.Components;
+using TotkCommon.Extensions;
+using TotkHashing;
+
+if (args.Length == 3 && File.Exists(args[0]) && Directory.Exists(args[1]) && File.Exists(args[2])) {
+    TotkChecksums checksums = TotkChecksums.FromFile(args[2]);
+    Console.WriteLine($"""
+        {args[0].ToCanonical(args[1])}: {checksums.IsFileVanilla(args[0], args[1])}
+        """);
+    return;
+}
 
 if (args.Length < 2)
 {
