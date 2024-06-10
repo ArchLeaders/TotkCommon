@@ -30,7 +30,11 @@ public class Totk
         get => _gamePath;
         set {
             _gamePath = value;
-            Zstd.LoadDictionaries(ZsDicPath);
+
+            if (File.Exists(ZsDicPath)) {
+                Zstd.LoadDictionaries(ZsDicPath);
+            }
+
             Version = GamePath.GetRomfsVersionOrDefault(100);
         }
     }
