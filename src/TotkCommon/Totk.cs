@@ -13,12 +13,12 @@ public class Totk
 
     static Totk()
     {
-        if (!File.Exists(_path))
-        {
-            Config = new();
-        }
-
         Zstd = new();
+
+        if (!File.Exists(_path)) {
+            Config = new();
+            return;
+        }
 
         using FileStream fs = File.OpenRead(_path);
         Config = JsonSerializer.Deserialize(fs, TotkConfigSerializerContext.Default.Totk)
