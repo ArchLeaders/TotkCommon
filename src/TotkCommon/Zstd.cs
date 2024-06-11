@@ -27,8 +27,7 @@ public class Zstd
             _compressionLevel = value;
             _defaultCompressor.Level = _compressionLevel;
 
-            foreach ((int _, Compressor compressor) in _compressors)
-            {
+            foreach ((int _, Compressor compressor) in _compressors) {
                 compressor.Level = value;
             }
         }
@@ -59,25 +58,21 @@ public class Zstd
 
     public void Decompress(ReadOnlySpan<byte> data, Span<byte> dst, out int zsDictionaryId)
     {
-        if (!IsCompressed(data))
-        {
+        if (!IsCompressed(data)) {
             zsDictionaryId = -1;
             return;
         }
 
         zsDictionaryId = GetDictionaryId(data);
-        if (_decompressors.TryGetValue(zsDictionaryId, out Decompressor? decompressor))
-        {
-            lock (_decompressors)
-            {
+        if (_decompressors.TryGetValue(zsDictionaryId, out Decompressor? decompressor)) {
+            lock (_decompressors) {
                 decompressor.Unwrap(data, dst);
             }
 
             return;
         }
 
-        lock (_defaultDecompressor)
-        {
+        lock (_defaultDecompressor) {
             _defaultDecompressor.Unwrap(data, dst);
         }
     }
@@ -111,8 +106,7 @@ public class Zstd
     {
         byte[]? decompressedBuffer = null;
 
-        if (IsCompressed(data))
-        {
+        if (IsCompressed(data)) {
             int decompressedSize = GetDecompressedSize(data);
             decompressedBuffer = ArrayPool<byte>.Shared.Rent(decompressedSize);
             Span<byte> decompressed = decompressedBuffer.AsSpan()[..decompressedSize];
@@ -120,33 +114,28 @@ public class Zstd
             data = decompressed;
         }
 
-        if (TryLoadDictionary(data))
-        {
+        if (TryLoadDictionary(data)) {
             return;
         }
 
-        if (data.Length < 8 || data.Read<uint>() != SARC_MAGIC)
-        {
+        if (data.Length < 8 || data.Read<uint>() != SARC_MAGIC) {
             return;
         }
 
         RevrsReader reader = new(data);
         ImmutableSarc sarc = new(ref reader);
-        foreach ((string _, Span<byte> sarcFileData) in sarc)
-        {
+        foreach ((string _, Span<byte> sarcFileData) in sarc) {
             TryLoadDictionary(sarcFileData);
         }
 
-        if (decompressedBuffer is not null)
-        {
+        if (decompressedBuffer is not null) {
             ArrayPool<byte>.Shared.Return(decompressedBuffer);
         }
     }
 
     private bool TryLoadDictionary(ReadOnlySpan<byte> buffer)
     {
-        if (buffer.Length < 8 || buffer.Read<uint>() != DICT_MAGIC)
-        {
+        if (buffer.Length < 8 || buffer.Read<uint>() != DICT_MAGIC) {
             return false;
         }
 
