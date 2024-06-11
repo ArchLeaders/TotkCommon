@@ -20,7 +20,7 @@ public class Zstd
     private readonly Compressor _defaultCompressor;
     private readonly Dictionary<int, Compressor> _compressors = [];
 
-    private int _compressionLevel = 17;
+    private int _compressionLevel = 7;
     public int CompressionLevel {
         get => _compressionLevel;
         set {
