@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace TotkCommon.Extensions;
 
@@ -114,34 +115,38 @@ public static partial class RomfsExtension
         };
     }
 
-    public static int GetRomfsVersion(this string romfs)
+    public static int GetRomfsVersion(this string romfs) => GetRomfsVersionOrDefault(romfs, out _);
+    public static int GetRomfsVersion(this string romfs, out string nsoid)
     {
         string regionLangMaskPath = Path.Combine(romfs, "System", "RegionLangMask.txt");
         return File.Exists(regionLangMaskPath) switch {
-            true => ParseRegionLangMaskVersion(regionLangMaskPath),
+            true => ParseRegionLangMask(regionLangMaskPath, out nsoid),
             false => throw new FileNotFoundException($"""
                 A RegionLangMask file could not be found: '{regionLangMaskPath}'
                 """),
         };
     }
 
-    public static int GetRomfsVersionOrDefault(this string romfs, int @default = 100)
+    public static int GetRomfsVersionOrDefault(this string romfs, int @default = 100) => GetRomfsVersionOrDefault(romfs, out _, @default);
+    public static int GetRomfsVersionOrDefault(this string romfs, out string? nsoid, int @default = 100)
     {
+        nsoid = default;
         string regionLangMaskPath = Path.Combine(romfs, "System", "RegionLangMask.txt");
         return File.Exists(regionLangMaskPath) switch {
-            true => ParseRegionLangMaskVersion(regionLangMaskPath),
+            true => ParseRegionLangMask(regionLangMaskPath, out nsoid),
             false => @default,
         };
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int ParseRegionLangMaskVersion(string regionLangMaskPath)
+    private static int ParseRegionLangMask(string regionLangMaskPath, out string nsoid)
     {
         using FileStream fs = File.OpenRead(regionLangMaskPath);
         int size = Convert.ToInt32(fs.Length);
         using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(size);
         fs.Read(buffer.Span);
         int lastCaretReturnIndex = buffer.Span.LastIndexOf((byte)'\r');
+        nsoid = Encoding.UTF8.GetString(buffer.Span[(lastCaretReturnIndex + 2)..]);
         return int.Parse(buffer.Span[(lastCaretReturnIndex - 3)..lastCaretReturnIndex]);
     }
 }

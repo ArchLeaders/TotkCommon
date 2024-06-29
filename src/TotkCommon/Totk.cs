@@ -36,7 +36,10 @@ public class Totk
         get => _gamePath;
         set {
             _gamePath = value;
-            Version = GamePath.GetRomfsVersionOrDefault(100);
+            Version = GamePath.GetRomfsVersionOrDefault(out string? nsoid, 100);
+            if (nsoid is not null) {
+                NSOBID = nsoid;
+            }
 
             if (File.Exists(ZsDicPath)) {
                 Zstd.LoadDictionaries(ZsDicPath);
@@ -56,6 +59,9 @@ public class Totk
 
     [JsonIgnore]
     public int Version { get; private set; } = 100;
+
+    [JsonIgnore]
+    public string NSOBID { get; private set; } = "082CE09B06E33A123CB1E2770F5F9147709033DB";
 
     public void Save()
     {
