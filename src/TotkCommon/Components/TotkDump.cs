@@ -50,11 +50,12 @@ public static class TotkDump
             }
         }
 
+        int missingFiles = checksumTable.Count - files.Length;
         return new TotkDumpResults(
-            badFiles.Count == 0,
+            badFiles.Count == 0 && missingFiles <= 0,
             badFiles,
             extraFiles,
-            checksumTable.Count - files.Length
+            missingFiles
         );
     }
 
