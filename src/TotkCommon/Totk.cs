@@ -15,6 +15,8 @@ namespace TotkCommon;
 public class Totk
 {
     private static readonly string _path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "totk", "Config.json");
+    
+    public const string TITLE_ID = "0100F2C0115B6000";
 
     public static Totk Config { get; }
     public static Zstd Zstd { get; }
