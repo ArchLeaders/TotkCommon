@@ -14,7 +14,7 @@ public static class PathExtension
     {
         Span<char> unsafeMutablePath;
         fixed (char* ptr = path) {
-            unsafeMutablePath = new(ptr, path.Length);
+            unsafeMutablePath = new Span<char>(ptr, path.Length);
         }
 
         for (int i = 0; i < path.Length; i++) {

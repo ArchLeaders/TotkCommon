@@ -4,6 +4,8 @@ using System.Text;
 
 namespace TotkCommon.Extensions;
 
+// ReSharper disable UnusedMember.Global
+
 [Flags]
 public enum RomfsFileAttributes
 {
@@ -13,7 +15,7 @@ public enum RomfsFileAttributes
     IsProductFile = 4,
 }
 
-public static partial class RomfsExtension
+public static class RomfsExtension
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlySpan<char> ToCanonical(this string fileRelativeToRomfs)
@@ -61,9 +63,9 @@ public static partial class RomfsExtension
     {
         if (file.Length < romfs.Length)
         {
-            throw new ArgumentException($"""
-                The provided {nameof(romfs)} path is longer than the input {nameof(file)}.
-                """, nameof(romfs));
+            throw new ArgumentException(
+                $"The provided {nameof(romfs)} path is longer than the input {nameof(file)}.", nameof(romfs)
+            );
         }
 
         attributes = 0;
@@ -121,9 +123,8 @@ public static partial class RomfsExtension
         string regionLangMaskPath = Path.Combine(romfs, "System", "RegionLangMask.txt");
         return File.Exists(regionLangMaskPath) switch {
             true => ParseRegionLangMask(regionLangMaskPath, out nsoid),
-            false => throw new FileNotFoundException($"""
-                A RegionLangMask file could not be found: '{regionLangMaskPath}'
-                """),
+            false => throw new FileNotFoundException(
+                $"A RegionLangMask file could not be found: '{regionLangMaskPath}'"),
         };
     }
 
@@ -144,7 +145,7 @@ public static partial class RomfsExtension
         using FileStream fs = File.OpenRead(regionLangMaskPath);
         int size = Convert.ToInt32(fs.Length);
         using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(size);
-        fs.Read(buffer.Span);
+        _ = fs.Read(buffer.Span);
         int lastCaretReturnIndex = buffer.Span.LastIndexOf((byte)'\r');
         nsoid = Encoding.UTF8.GetString(buffer.Span[(lastCaretReturnIndex + 2)..]);
         return int.Parse(buffer.Span[(lastCaretReturnIndex - 3)..lastCaretReturnIndex]);

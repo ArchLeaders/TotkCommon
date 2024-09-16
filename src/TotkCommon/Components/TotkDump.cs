@@ -7,6 +7,8 @@ using TotkCommon.Extensions;
 
 namespace TotkCommon.Components;
 
+// ReSharper disable NotAccessedPositionalProperty.Global, UnusedType.Global, UnusedMember.Global
+
 public static class TotkDump
 {
     public static TotkDumpResults CheckIntegrity(string input, Span<byte> tableData, Action<int, int>? updateCallback = null, bool breakAfterFirstBadFile = false)
@@ -36,7 +38,7 @@ public static class TotkDump
 
             int size = Convert.ToInt32(fs.Length);
             using SpanOwner<byte> dataOwner = SpanOwner<byte>.Allocate(size);
-            fs.Read(dataOwner.Span);
+            _ = fs.Read(dataOwner.Span);
             ulong currentDataChecksum = XxHash3.HashToUInt64(dataOwner.Span);
 
             if (currentDataChecksum == storedDatachecksum) {

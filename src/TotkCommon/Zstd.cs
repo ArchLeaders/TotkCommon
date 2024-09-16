@@ -7,6 +7,8 @@ using ZstdSharp;
 
 namespace TotkCommon;
 
+// ReSharper disable UnusedMember.Global
+
 public class Zstd
 {
     public static Zstd Shared { get; } = new();
@@ -35,7 +37,7 @@ public class Zstd
 
     public Zstd()
     {
-        _defaultCompressor = new(CompressionLevel);
+        _defaultCompressor = new Compressor(CompressionLevel);
     }
 
     public byte[] Decompress(ReadOnlySpan<byte> data)
@@ -98,7 +100,7 @@ public class Zstd
         using FileStream fs = File.OpenRead(file);
         int size = Convert.ToInt32(fs.Length);
         using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(size);
-        fs.Read(buffer.Span);
+        _ = fs.Read(buffer.Span);
         LoadDictionaries(buffer.Span);
     }
 
@@ -158,7 +160,7 @@ public class Zstd
     public static int GetDecompressedSize(Stream stream)
     {
         Span<byte> header = stackalloc byte[14];
-        stream.Read(header);
+        _ = stream.Read(header);
         return GetFrameContentSize(header);
     }
 
@@ -178,9 +180,8 @@ public class Zstd
             0x1 => buffer[5 + windowDescriptorSize],
             0x2 => buffer[(5 + windowDescriptorSize)..].Read<ushort>(),
             0x3 => buffer[(5 + windowDescriptorSize)..].Read<int>(),
-            _ => throw new OverflowException("""
-                Two bits cannot exceed 0x3, something terrible has happened!
-                """)
+            _ => throw new OverflowException(
+                "Two bits cannot exceed 0x3, something terrible has happened!")
         };
     }
 
@@ -196,18 +197,16 @@ public class Zstd
             0x1 => 5 + windowDescriptorSize + 1,
             0x2 => 5 + windowDescriptorSize + 2,
             0x3 => 5 + windowDescriptorSize + 4,
-            _ => throw new OverflowException("""
-                Two bits cannot exceed 0x3, something terrible has happened!
-                """)
+            _ => throw new OverflowException(
+                "Two bits cannot exceed 0x3, something terrible has happened!")
         };
 
         return frameContentFlag switch {
             0x0 => buffer[offset],
             0x1 => buffer[offset..].Read<ushort>() + 0x100,
             0x2 => buffer[offset..].Read<int>(),
-            _ => throw new NotSupportedException("""
-                64-bit file sizes are not supported.
-                """)
+            _ => throw new NotSupportedException(
+                "64-bit file sizes are not supported.")
         };
     }
 }

@@ -3,11 +3,14 @@ using BymlLibrary.Extensions;
 using CommunityToolkit.HighPerformance.Buffers;
 using Revrs;
 using System.Collections.Frozen;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TotkCommon.Extensions;
 
 namespace TotkCommon;
+
+// ReSharper disable UnusedMember.Global
 
 public class Totk
 {
@@ -19,16 +22,16 @@ public class Totk
 
     static Totk()
     {
-        Zstd = new();
+        Zstd = new Zstd();
 
         if (!File.Exists(_path)) {
-            Config = new();
+            Config = new Totk();
             return;
         }
 
         using FileStream fs = File.OpenRead(_path);
         Config = JsonSerializer.Deserialize(fs, TotkConfigSerializerContext.Default.Totk)
-            ?? new();
+            ?? new Totk();
     }
 
     private string _gamePath = string.Empty;
@@ -61,6 +64,7 @@ public class Totk
     public int Version { get; private set; } = 100;
 
     [JsonIgnore]
+    [SuppressMessage("ReSharper", "InconsistentNaming")]
     public string NSOBID { get; private set; } = "082CE09B06E33A123CB1E2770F5F9147709033DB";
 
     public void Save()
@@ -75,7 +79,7 @@ public class Totk
         using FileStream fs = File.OpenRead(AddressTablePath);
         int size = Convert.ToInt32(fs.Length);
         using SpanOwner<byte> buffer = SpanOwner<byte>.Allocate(size);
-        fs.Read(buffer.Span);
+        _ = fs.Read(buffer.Span);
 
         size = Zstd.GetDecompressedSize(buffer.Span);
         using SpanOwner<byte> decompressed = SpanOwner<byte>.Allocate(size);
@@ -85,7 +89,7 @@ public class Totk
 
         RevrsReader reader = new(decompressed.Span);
         ImmutableByml root = new(ref reader);
-        foreach (var (keyIndex, value) in root.GetMap()) {
+        foreach ((int keyIndex, ImmutableByml value) in root.GetMap()) {
             addressTable[root.KeyTable[keyIndex].ToManaged()] = root.StringTable[value.GetStringIndex()].ToManaged();
         }
 
@@ -94,7 +98,4 @@ public class Totk
 }
 
 [JsonSerializable(typeof(Totk))]
-public partial class TotkConfigSerializerContext : JsonSerializerContext
-{
-
-}
+public partial class TotkConfigSerializerContext : JsonSerializerContext;

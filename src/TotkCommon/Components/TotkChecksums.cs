@@ -9,6 +9,8 @@ using TotkCommon.Models;
 
 namespace TotkCommon.Components;
 
+// ReSharper disable UnusedMember.Global
+
 public class TotkChecksums
 {
     private readonly int _version;
@@ -39,7 +41,7 @@ public class TotkChecksums
             entries[key] = versions;
         }
 
-        return new(version, entries);
+        return new TotkChecksums(version, entries);
     }
 
     public static ulong GetNameHash(ReadOnlySpan<char> canonicalFileName)
